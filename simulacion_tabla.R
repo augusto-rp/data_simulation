@@ -210,7 +210,7 @@ library(ez)
 library (psych)
 
 #Exploracion de descriptivos
-
+describe(df_larga)
 
 #describir promedios de ao_value de acuerdo a niveles de group_topic
 
@@ -257,9 +257,18 @@ library(lme4)
 
 #creamos un modelo base usando solo efecto aleatorio
 
-base <- lmer(ao_value ~ 1 + (1 |topic),
+base <- lmer(ao_value ~ 1 + (1 |id),
                        data = df_larga,
                        REML = TRUE)
+
+base
+summary(base)
+
+#ICC = var(intercepto sujeto)/(var(intercepto sujeto)+var(residual))
+icc <- as.numeric(VarCorr(base)$id[1]) / (as.numeric(VarCorr(base)$id[1]) + attr(VarCorr(base), "sc")^2)
+icc #0.649 es decir 64% varianza es explica por diferencias entre individuos, baselines muy disstintos individuales
+
+
 
 #ahora agregar al modelo predictor fijo group
 modelo1<-update(base, . ~ . + group)
