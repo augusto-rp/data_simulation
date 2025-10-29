@@ -199,9 +199,23 @@ df_larga <- df_larga |>
     )
   )
 
+#Algo que aun queda por hacer es una unica columna de fun que asigne valor de fun_p cuando topic es politic y fun_np cuando topic es non
+df_larga <- df_larga |>
+  mutate(
+    fun_value = case_when(
+      topic == "political" ~ fun_p,
+      topic == "non" ~ fun_np
+    )
+  )
+
+#ELIMINAR COLUMNAS FUN_NP Y FUN_P
+df_larga <- df_larga |>
+  select(-c(fun_p, fun_np))
+
 str(df_larga)
 df_larga$topic<-as.factor(df_larga$topic)
 df_larga$group_topic<-as.factor(df_larga$group_topic)
+df_larga$id<-as.factor(df_larga$id)
 
 # ESTIMACION DE MODELO ----------------------------------------------------
 
@@ -211,6 +225,7 @@ library (psych)
 
 #Exploracion de descriptivos
 describe(df_larga)
+str(df_larga)
 
 #describir promedios de ao_value de acuerdo a niveles de group_topic
 
@@ -254,9 +269,11 @@ modelo_anova
 ##########  USANDO GLM
 #recordar que parte repetida topic se especifica en parte aleatoria
 library(lme4)
+library(reghelper)
 
 #creamos un modelo base usando solo efecto aleatorio
 
+#usando |id que mide variacion entre individuos
 base <- lmer(ao_value ~ 1 + (1 |id),
                        data = df_larga,
                        REML = TRUE)
@@ -267,8 +284,23 @@ summary(base)
 #ICC = var(intercepto sujeto)/(var(intercepto sujeto)+var(residual))
 icc <- as.numeric(VarCorr(base)$id[1]) / (as.numeric(VarCorr(base)$id[1]) + attr(VarCorr(base), "sc")^2)
 icc #0.649 es decir 64% varianza es explica por diferencias entre individuos, baselines muy disstintos individuales
+reghelper::ICC(base) #MAS SENCILLO
+
+#usando |id/topic que mide variacion entre individuos
+base_2 <- lmer(ao_value ~ 1 + (1 |id)+ (1 |topic),
+             data = df_larga,
+             REML = TRUE)
+summary(base_2)
+#inncesario agregar topic
+#una vez que se considera individuos hay 0 varianza en topic
 
 
+# y si quiero decir que efecto aleatorio de individuo puede variar e funcion de pol y fun_value
+#base_3 <- lmer(ao_value ~ 1 + (1+fun_value |id),
+#               data = df_larga,
+ #              REML = TRUE)  #numero de observaciones=a numero de parametros lo que hace inidentificable este modelo
+#For every single observation, the model is trying to estimate two unique parameters associated with that individual.
+#This leaves zero degrees of freedom for the model to estimate the residual variance—the error that is not explained by the fixed or random effects.
 
 #ahora agregar al modelo predictor fijo group
 modelo1<-update(base, . ~ . + group)
