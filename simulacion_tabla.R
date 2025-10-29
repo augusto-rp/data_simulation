@@ -3,7 +3,8 @@ library(MASS)
 library(dplyr)
 
 library(usethis)
-
+use_git()
+use_github()
 
 
 # --- Parameters ---
@@ -224,9 +225,48 @@ print(dif_promedios )
 #########Examinacion de criterios ANOVA
 #Exploracion de mauchly sphericity test
 
+
+
 ###############ESTIMACION DE MODELO USANDO ezANOVA
 #definir contrastes
 c_humor<-c(1, -1) #contraste de humor vrs no humor
 c_topico<-c(1, -1) #contraste de topico politico vrs no politico
 
-contrastes(df_larga$group)<-cbind(c_humor)
+contrasts(df_larga$group)<-cbind(c_humor)
+contrasts(df_larga$topic)<-cbind(c_topico)
+
+#hacer anova
+modelo_anova <- ezANOVA(
+  data = df_larga,
+  dv = ao_value,
+  wid = id,
+  within = .(topic),
+  between = .(group),
+  type = 3,
+  detailed = TRUE
+)
+
+modelo_anova
+#como es de esperar nada es significativa because why would it be
+
+
+
+##########  USANDO GLM
+#recordar que parte repetida topic se especifica en parte aleatoria
+library(lme4)
+
+#creamos un modelo base usando solo efecto aleatorio
+
+base <- lmer(ao_value ~ 1 + (1 |topic),
+                       data = df_larga,
+                       REML = TRUE)
+
+#ahora agregar al modelo predictor fijo group
+modelo1<-update(base, . ~ . + group)
+
+#y ahora agrega a modelo1 predictor pol
+modelo2<-update(modelo1, . ~ . + pol)
+
+#y ahora comparar los modelos}
+
+anova(base, modelo1, modelo2)
